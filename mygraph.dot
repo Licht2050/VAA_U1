@@ -1,0 +1,13 @@
+digraph ClusterNodes {
+		rankdir=UD;
+		size="8,5"
+		node [shape = circle];
+	node04 -> Master
+	node04 -> node03
+	node04 -> node02
+	Master -> node03
+	Master -> node05
+	Master -> Philisoph2
+	node03 -> Master
+	node03 -> node05
+}
