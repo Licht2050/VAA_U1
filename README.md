@@ -1,8 +1,12 @@
 # VAA_Uebung1
 
 
-The following program start a cluster
-There is two way to start the program:
+The following program start a cluster with master and worker nodes\
+Each node first randomly selects neighbors and sends information about them to the master node.\
+The master node allows the user to print all nodes with neighbors.\
+The master node also allows the user to start sending rumors. and each node sends the rumors to its neighbors if it receives it for the first time.\
+
+## There is two way to start the program:
 
 1. It can provide a ".txt" file path as a parameter, which includes information about the cluster master and the worker node. The following example shows the format, such as the information tree to be recorded.
 
@@ -19,6 +23,7 @@ There is two way to start the program:
 2. could automatically start any node number. The program accepts two parameters, the first an "auto" string and the second an integer, which represents the number of nodes. The following example starts a cluster with 10 worker nodes:
 
     **./start auto 10**
+    
 
 The program start master and worker nodes in a new tabs. each node shows the cycle of random neighbor choice. the neighbor selection process begins each time a new node has successfully joined the cluster.
 
