@@ -11,14 +11,14 @@ There is two way to start the program:
     
     The program takes as the first parameter a "file" string, and the second parameter the path of the file as follows: 
 
-    `./start file Nodes.txt`
+    **./start file Nodes.txt**
     
     __A "Nodes.txt" file already exists in the root folder.__
 
 
 2. could automatically start any node number. The program accepts two parameters, the first an "auto" string and the second an integer, which represents the number of nodes. The following example starts a cluster with 10 worker nodes:
 
-    `./start auto 10`
+    **./start auto 10**
 
 The program start master and worker nodes in a new tabs. each node shows the cycle of random neighbor choice. the neighbor selection process begins each time a new node has successfully joined the cluster.
 
