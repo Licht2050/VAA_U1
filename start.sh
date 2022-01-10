@@ -2,7 +2,7 @@
 
 
 CLUSTER_FILE='Nodes.txt'
-CLUSTER_START_FILE='main2'
+CLUSTER_START_FILE='main'
 CLUSTER_KEY_FILE='clusterKey.txt'
 
 MASTER_NODE_ID='Master'
@@ -160,6 +160,7 @@ function main () {
 
 if [[ $# -gt 1 ]]
 then
+    command go build main.go
     main $1 $2
 else
     echo "parameter missing"
