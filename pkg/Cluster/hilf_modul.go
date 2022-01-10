@@ -51,7 +51,7 @@ func Menu() {
 	fmt.Println("7. Parse directed graph to .dot file")
 	fmt.Println("8. Read graph from file")
 	fmt.Println("9. Read neighbour from gv.dot file")
-	fmt.Println("10. Create Rondom Directed Graph")
+	fmt.Println("10. Create Rondom UnDirected Graph")
 }
 
 type Error_And_Msg struct {
@@ -117,12 +117,12 @@ func UserInputInt(result *int) {
 }
 
 func SearchMemberbyName(nodeName string, ml *memberlist.Memberlist) *memberlist.Node {
-	foundNode := memberlist.Node{}
+	masterNode := memberlist.Node{}
 	for _, member := range ml.Members() {
 		if member.Name == nodeName {
-			foundNode = *member
+			masterNode = *member
 			break
 		}
 	}
-	return &foundNode
+	return &masterNode
 }

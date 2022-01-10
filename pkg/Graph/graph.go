@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -33,13 +35,26 @@ func (g *Graph) AddNode(node string) {
 	g.Nodes[node] = node1
 }
 
+func (g *Graph) RemoveSelectedEdge(fromNode, removeNode string) {
+
+	if _, ok := g.Nodes[fromNode]; ok {
+		delete(g.Nodes[fromNode].Nodes, removeNode)
+	}
+}
+
 func (g *Graph) RemoveEdge(node string) {
 	if node == "" {
 		log.Println("Remove Edge failed: param is empty!")
 		return
 	}
-	g.Nodes[node].Nodes = make(map[string]*Node)
-	// delete(g.Nodes, node)
+	if !g.Directed {
+		g.Nodes[node].Nodes = make(map[string]*Node)
+		// delete(g.Nodes, node)
+	} else {
+		for edgeNode := range g.Nodes[node].Nodes {
+			g.RemoveSelectedEdge(edgeNode, node)
+		}
+	}
 }
 
 func (g *Graph) RemoveNode(node string) {
@@ -56,10 +71,18 @@ func (g *Graph) RemoveNode(node string) {
 }
 
 type Graph struct {
-	Nodes map[string]*Node
+	Directed bool
+	Nodes    map[string]*Node
 }
 
-func NewGraph() *Graph {
+func NewDiGraph() *Graph {
+	return &Graph{
+		Directed: true,
+		Nodes:    map[string]*Node{},
+	}
+}
+
+func NewUnDiGraph() *Graph {
 	return &Graph{
 		Nodes: map[string]*Node{},
 	}
@@ -84,6 +107,11 @@ func (g *Graph) AddEdge(nodeFrom, nodeTo string) {
 	node1.Nodes[node2.Name] = node2
 	g.Nodes[node1.Name] = node1
 
+	if !g.Directed && node1.Name != node2.Name {
+		node2.Nodes[node1.Name] = node1
+		g.Nodes[node2.Name] = node2
+	}
+
 }
 
 func (g *Graph) GetEdges(node string) *Node {
@@ -91,15 +119,36 @@ func (g *Graph) GetEdges(node string) *Node {
 }
 
 func (g *Graph) String() string {
-	out := `digraph ClusterNodes {
+	//if Graph is directed
+	if g.Directed {
+		out := `digraph ClusterNodes {
+			graph [ dpi = 600 ]; 
+			rankdir=UD;
+			size="8,5";
+			node [shape = circle];`
+		out += "\n"
+		for k := range g.Nodes {
+			for _, v := range g.GetEdges(k).Nodes {
+				out += fmt.Sprintf("\t%s -> %s\n", k, v.Name)
+			}
+		}
+		out += "}"
+		return out
+	}
+
+	out := `graph ClusterNodes {
 		graph [ dpi = 600 ]; 
 		rankdir=UD;
 		size="8,5";
 		node [shape = circle];`
 	out += "\n"
+	var temp = make(map[string]string)
 	for k := range g.Nodes {
+		temp[k] = k
 		for _, v := range g.GetEdges(k).Nodes {
-			out += fmt.Sprintf("\t%s -> %s\n", k, v.Name)
+			if _, ok := temp[v.Name]; !ok {
+				out += fmt.Sprintf("\t%s -- %s\n", k, v.Name)
+			}
 		}
 	}
 	out += "}"
@@ -112,19 +161,38 @@ func (g *Graph) ParseStringToDiG(data string) {
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(data))
+	//it read the first line and validate if it is directed graph
+	scanner.Scan()
+	graph := strings.Fields(scanner.Text())
+	if graph[0] == "digraph" {
+		for scanner.Scan() {
+			line := scanner.Text()
+			str := regexp.MustCompile(`[\w\d]+.\->.[\w\d]+`)
+
+			for _, element := range str.FindAllString(line, -1) {
+				g.AddNode(strings.TrimSpace(strings.Split(element, "->")[0]))
+				g.AddNode(strings.TrimSpace(strings.Split(element, "->")[1]))
+				g.AddEdge(strings.TrimSpace(strings.Split(element, "->")[0]),
+					strings.TrimSpace(strings.Split(element, "->")[1]),
+				)
+			}
+		}
+		return
+	}
+	//if graph is undirected
 	for scanner.Scan() {
 		line := scanner.Text()
-		str := regexp.MustCompile(`[\w\d]+.\->.[\w\d]+`)
+		str := regexp.MustCompile(`[\w\d]+.\--.[\w\d]+`)
 
 		for _, element := range str.FindAllString(line, -1) {
-			g.AddNode(strings.TrimSpace(strings.Split(element, "->")[0]))
-			g.AddNode(strings.TrimSpace(strings.Split(element, "->")[1]))
-			g.AddEdge(strings.TrimSpace(strings.Split(element, "->")[0]),
-				strings.TrimSpace(strings.Split(element, "->")[1]),
+			g.AddNode(strings.TrimSpace(strings.Split(element, "--")[0]))
+			g.AddNode(strings.TrimSpace(strings.Split(element, "--")[1]))
+			g.AddEdge(strings.TrimSpace(strings.Split(element, "--")[0]),
+				strings.TrimSpace(strings.Split(element, "--")[1]),
 			)
 		}
-
 	}
+
 }
 
 func (g *Graph) ParseFileToGraph(path string) {
@@ -169,4 +237,51 @@ func (g *Graph) ParseGraphToPNGFile(filename string) {
 
 	fmt.Println("Parsing graph to PNG file: ", filename+".png")
 	cmd.Wait()
+}
+
+func RondomDiGraph(nodeNum, edgeNum int) Graph {
+
+	g := NewUnDiGraph()
+	for index := 0; index < nodeNum; index++ {
+		g.AddNode("node0" + strconv.Itoa(index))
+	}
+
+	randNode := ""
+	for _, node := range g.Nodes {
+		for {
+			randNode = ChoseRondomFromMap(g)
+			if node.Name != randNode {
+				break
+			}
+		}
+		g.AddEdge(node.Name, randNode)
+	}
+
+	nodeRight := ""
+	nodeLeft := ""
+	for index := 0; index < edgeNum-len(g.Nodes); index++ {
+
+		//if the radomly chosen edge already exists, do so until a non-existent combination is selected
+		for {
+			nodeRight = ChoseRondomFromMap(g)
+			nodeLeft = ChoseRondomFromMap(g)
+
+			if _, ok := g.Nodes[nodeLeft].Nodes[nodeRight]; !ok && nodeLeft != nodeRight {
+				break
+			}
+
+		}
+		g.AddEdge(nodeLeft, nodeRight)
+	}
+	return *g
+}
+
+func ChoseRondomFromMap(mp *Graph) string {
+	temp_slice := []string{}
+	for _, element := range mp.Nodes {
+		temp_slice = append(temp_slice, element.Name)
+	}
+
+	randIndex := rand.Intn(len(temp_slice))
+	return temp_slice[randIndex]
 }

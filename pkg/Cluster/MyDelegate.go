@@ -26,7 +26,48 @@ type SyncerDelegate struct {
 	BelievableRumorsRNum *int
 }
 
-//compare the incoming byte message to structs
+// type MemberlistBroadcast struct {
+// 	node string
+// 	msg  []byte
+// 	//	notify chan struct{}
+// }
+
+// func (p *MemberlistBroadcast) Invalidates(other memberlist.Broadcast) bool {
+// 	// Check if that broadcast is a memberlist type
+// 	mb, ok := other.(*MemberlistBroadcast)
+// 	if !ok {
+// 		return false
+// 	}
+
+// 	// Invalidates any message about the same node
+// 	return p.node == mb.node
+// }
+
+// func (p *MemberlistBroadcast) Message() []byte {
+// 	return p.msg
+// }
+
+// func (p *MemberlistBroadcast) Finished() {
+// 	//	select {
+// 	//	case p.notify <- struct{}{}:
+// 	//	default:
+// 	//	}
+// }
+
+// func (sd *SyncerDelegate) Broadcast(nodeName string, message Message) {
+// 	body, _ := json.Marshal(message)
+// 	sd.Broadcasts.QueueBroadcast(&MemberlistBroadcast{nodeName, body})
+
+// }
+
+// Memberlist Delete Handlers
+// NodeMeta is used to retrieve meta-data about the current node
+// when broadcasting an alive message. It's length is limited to
+// the given byte size. This metadata is available in the Node structure.
+func (sd *SyncerDelegate) NodeMeta(limit int) []byte {
+	return []byte{}
+}
+
 func CompareJson(msg []byte, NeigbourGraph interface{}) string {
 	var receivedMsg map[string]interface{}
 	err := json.Unmarshal(msg, &receivedMsg)
@@ -143,7 +184,7 @@ func (sd *SyncerDelegate) SendMsgToNeighbours(value interface{}) {
 func ReadNeighbourFromDot(sd *SyncerDelegate) {
 	if sd.neighbourFilePath != nil && *sd.neighbourFilePath != "" {
 
-		g := Graph.NewGraph()
+		g := Graph.NewDiGraph()
 		g.ParseFileToGraph(*sd.neighbourFilePath)
 
 		if AddNodesToNeighbourList(g, sd) {
@@ -156,21 +197,16 @@ func ReadNeighbourFromDot(sd *SyncerDelegate) {
 func AddNodesToNeighbourList(g *Graph.Graph, sd *SyncerDelegate) bool {
 	for _, node := range g.Nodes {
 		if node.Name == sd.LocalNode.Name {
-
+			sd.Neighbours.ClearNeighbours()
 			neighbours := g.GetEdges(node.Name)
-			if len(neighbours.Nodes) > 0 {
-				sd.Neighbours.ClearNeighbours()
-				for _, neighbour := range neighbours.Nodes {
-					//it add to the neighbour list if the node is a cluster memeber
-					found_Node := SearchMemberbyName(neighbour.Name, sd.Node)
-					if found_Node.Name == neighbour.Name {
+			for _, neighbour := range neighbours.Nodes {
+				//it add to the neighbour list if the node is a cluster memeber
+				if SearchMemberbyName(neighbour.Name, sd.Node).Name == neighbour.Name {
 
-						sd.Neighbours.AddNeighbour(*found_Node)
-					}
+					sd.Neighbours.AddNeighbour(memberlist.Node{Name: neighbour.Name})
 				}
-				return true
 			}
-			return false
+			return true
 		}
 	}
 	return false
@@ -258,11 +294,4 @@ func (sd *SyncerDelegate) LocalState(join bool) []byte {
 // boolean indicates this is for a join instead of a push/pull.
 func (sd *SyncerDelegate) MergeRemoteState(buf []byte, join bool) {
 
-}
-
-// NodeMeta is used to retrieve meta-data about the current node
-// when broadcasting an alive message. It's length is limited to
-// the given byte size. This metadata is available in the Node structure.
-func (sd *SyncerDelegate) NodeMeta(limit int) []byte {
-	return []byte{}
 }

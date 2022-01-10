@@ -21,8 +21,6 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
-var file = "mygraph.dot"
-
 /**Bei Initieren einer Cluster wird:
  *Ein TCP-Port mit der Hilfe von memberlist "PKG" geoeffnet
  *der Prozess bekommt: Id, BindAddr(IP) und BindPort.
@@ -51,19 +49,21 @@ func InitCluster(nodeName, bindIP, bindPort, httpPort string) {
 	ml, err := memberlist.Create(config)
 	err_st := Error_And_Msg{Err: err}
 	Check(err_st)
-
-	g := Graph.NewGraph()
-
+	g := Graph.NewDiGraph()
+	// ng := Cluster.NeigbourGraph{Node: ml.LocalNode().Name}
 	neigbours := Neighbour.NewNeighbourList()
 	neigbours.Node = *ml.LocalNode()
 	neigbourNum := 3
 	nodeList := new(Neighbour.NodesList)
+
 	nodesNeighbour := Neighbour.NodesAndNeighbours{}
 
 	AddClusterMemberToNodeList(ml, nodeList)
 
 	rumors_list := NewRumorsList()
 	blievableRRNum := 2
+
+	file := "mygraph.dot"
 
 	sd := &SyncerDelegate{
 		Node: ml, Neighbours: neigbours, NeighbourNum: &neigbourNum,
@@ -187,7 +187,10 @@ func userInput(ml *memberlist.Memberlist, g *Graph.Graph,
 	case Read_Neighbours_From_DotFile:
 		readNeighbours_from_file(ml, sd)
 	case Create_Rondom_Graph:
-		g := RondomDiGraph()
+		nodeNum := -1
+		edgeNum := -1
+		Input(&nodeNum, &edgeNum)
+		g := Graph.RondomDiGraph(nodeNum, edgeNum)
 		fmt.Println(g.String())
 		// g.ParseGraphToFile("testGraph")
 		// fmt.Println("Successfully added to the file testgraph.dot")
@@ -235,7 +238,7 @@ func readGraphFromFile() {
 	path := ""
 	fmt.Printf("Enter file name \".dot\": ")
 	fmt.Scanf("%s", &path)
-	g := Graph.NewGraph()
+	g := Graph.NewDiGraph()
 	g.ParseFileToGraph(path)
 	fmt.Println(g.String())
 }
@@ -275,38 +278,6 @@ func SendRumors(ml *memberlist.Memberlist, rumorsList *RumorsList, sd *SyncerDel
 	time.Sleep(1 * time.Second)
 }
 
-func RondomDiGraph() Graph.Graph {
-	edgeNum := -1
-	nodeNum := -1
-	Input(&nodeNum, &edgeNum)
-
-	g := Graph.NewGraph()
-	for index := 0; index < nodeNum; index++ {
-		g.AddNode("node0" + strconv.Itoa(index))
-	}
-
-	for _, node := range g.Nodes {
-		g.AddEdge(node.Name, ChoseRondomFromMap(g))
-	}
-
-	nodeRight := ""
-	nodeLeft := ""
-	for index := 0; index < edgeNum-len(g.Nodes); index++ {
-
-		nodeRight = ChoseRondomFromMap(g)
-		nodeLeft = ChoseRondomFromMap(g)
-		//if the radomly chosen edge already exists, do so until a non-existent combination is selected
-		for {
-			if _, ok := g.Nodes[nodeLeft].Nodes[nodeRight]; !ok {
-				break
-			}
-			nodeRight = ChoseRondomFromMap(g)
-			nodeLeft = ChoseRondomFromMap(g)
-		}
-		g.AddEdge(nodeLeft, nodeRight)
-	}
-	return *g
-}
 
 func Input(nodeNum *int, edgeNum *int) {
 	fmt.Println("Nodeanzahl eingeben: ")
@@ -322,12 +293,3 @@ func Input(nodeNum *int, edgeNum *int) {
 	}
 }
 
-func ChoseRondomFromMap(mp *Graph.Graph) string {
-	temp_slice := []string{}
-	for _, element := range mp.Nodes {
-		temp_slice = append(temp_slice, element.Name)
-	}
-
-	randIndex := rand.Intn(len(temp_slice))
-	return temp_slice[randIndex]
-}

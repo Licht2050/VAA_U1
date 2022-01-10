@@ -7,7 +7,7 @@ digraph ClusterNodes {
 	node04 -> node02
 	Master -> node03
 	Master -> node05
-	Master -> Philisoph2
+	Master -> node06
 	node03 -> Master
 	node03 -> node05
 }

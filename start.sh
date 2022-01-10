@@ -1,15 +1,15 @@
 #!/bin/bash
 
+
 CLUSTER_FILE='Nodes.txt'
 CLUSTER_START_FILE='main2'
 CLUSTER_KEY_FILE='clusterKey.txt'
 
 MASTER_NODE_ID='Master'
-PHILISOPH_NOD_ID='Philisoph'
+PHILISOPH_NOD_ID='Node'
 MASTER_IP='127.0.0.1'
 MASTER_PORT=8710
 MASTER_HTTP_PORT=8001
-
 
 
 function start_cluster_node () {
@@ -20,10 +20,10 @@ function start_cluster_node () {
         # command ./$CLUSTER_START_FILE init >output.txt 2>&1  &
     elif [[ "$1" == "join" ]] && [[ $# -eq 6 ]]
     then
-        echo "joint startet: $5"
+        echo "joint startet: $6"
         command gnome-terminal --tab --title=$2  -- /bin/bash -c \
             "./$CLUSTER_START_FILE join \--node-name=$2 --known-ip=$3 \
-            --cluster-key=$4 --bind-port=$5 --http-port=$6"
+            --cluster-key=$4 --http-port=$5 --http-port=$6"
         # command ./$CLUSTER_START_FILE $1 --node-name=$2 --known-ip=$3 \
             #--cluster-key=$4 --bind-port=$5 --http-port=$6 >output.txt 2>&1  &
     fi
@@ -68,9 +68,9 @@ function read_file_line() {
                 start_cluster_node "init" "$nodeId" "$nodeIP" "$nodePORT" "800$n"
                 echo "Master-Node startet in a new Tab!"
 
-                readarray readFile <<< "$(read_cluster_key $CLUSTER_KEY_FILE)"
-                cluster_key=${readFile[0]}
-                cluster_port=${readFile[1]}
+                readarray test <<< "$(read_cluster_key $CLUSTER_KEY_FILE)"
+                cluster_key=${test[0]}
+                cluster_port=${test[1]}
                 #remove newline
                 cluster_key="$(echo "$cluster_key"|tr -d '\n')"
                 cluster_port="$(echo "$cluster_port"|tr -d '\n')"     
@@ -81,6 +81,16 @@ function read_file_line() {
         return -1
     fi
     
+}
+
+function read_node_info_from_file () {
+    if [[ ! -f "$1" ]]
+    then
+        echo "file does not exist: $1"
+        exit 1
+    else
+        echo "inside"
+    fi
 }
 
 function start_MasterNode () {
@@ -115,8 +125,7 @@ function start_NNodes () {
 
 }
 
-
-function startNPhilosof () {
+function startNPWorkerNodes () {
     if [[ $1 -gt 0 ]]
     then
         start_MasterNode $MASTER_NODE_ID $MASTER_IP $MASTER_PORT $MASTER_HTTP_PORT
@@ -125,19 +134,15 @@ function startNPhilosof () {
     fi
 }
 
-function read_node_info_from_file () {
-    if [[ ! -f "$CLUSTER_FILE" ]]
-    then
-        echo "file does not exist: $CLUSTER_FILE"
-        exit 1
-    else
-        echo "inside"
-    fi
-}
-
 function main () {
     echo "Cluster startet-------------------------------"
-    read_file_line $CLUSTER_FILE
+    if [[ "$1" == "file" ]]
+    then
+        read_file_line $2
+    elif [[ "$1" == "auto" ]]
+    then
+        startNPWorkerNodes $2
+    fi
     # wait
 }
 
@@ -152,8 +157,12 @@ function main () {
 
 
 # start_cluster_node "init"
-# main
 
-startNPhilosof $1
+if [[ $# -gt 1 ]]
+then
+    main $1 $2
+else
+    echo "parameter missing"
+fi
 
 echo "All processes Runing!"
